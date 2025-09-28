@@ -1,706 +1,434 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Coach Desk — AYSO Game Card Scanner</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>AYSO Game Card Scanner • Coach Desk</title>
 
-<!-- Tailwind CDN -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme:{extend:{
-      colors:{brand:{50:'#e6f6f5',100:'#cfecea',200:'#a2dad5',300:'#74c8c1',400:'#47b6ae',500:'#1ca59b',600:'#0f766e',700:'#0d5f59',800:'#0b4944',900:'#07302d'}},
-      boxShadow:{soft:'0 12px 32px rgba(0,0,0,.10)'},
-      fontFamily:{sans:['Inter','ui-sans-serif','system-ui','Segoe UI','Roboto','sans-serif']}
-    }}
-  }
-</script>
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme:{extend:{
+        colors:{brand:{
+          50:'#e6f6f5',100:'#cef0ee',200:'#9ddfdb',300:'#6bcfcc',
+          400:'#39c0ba',500:'#12b3ac',600:'#0f766e',
+          700:'#0d5e58',800:'#0b4742',900:'#08312e'}},
+        boxShadow:{soft:'0 10px 28px rgba(0,0,0,.12)'},
+        fontFamily:{sans:['Inter','ui-sans-serif','system-ui','sans-serif']}
+      }}
+    }
+  </script>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<!-- Tesseract OCR -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-<!-- FileSaver -->
-<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&display=swap" rel="stylesheet" />
 
-<style>
-  html,body{height:100%}
-  .btn{background:linear-gradient(180deg,#1ca59b 0%,#0f766e 100%);color:#fff;border-radius:.75rem;padding:.6rem 1rem;font-weight:600;box-shadow:0 10px 28px rgba(0,0,0,.12)}
-  .btn:hover{filter:brightness(1.05)}
-  .btn-ghost{border:1px solid #d1d5db;padding:.55rem 1rem;border-radius:.75rem}
-  .chip{display:inline-flex;align-items:center;font-size:.75rem;padding:.25rem .6rem;border-radius:999px;background:#eef2f7}
-  .tab{padding:.4rem 1rem;border-radius:9999px;cursor:pointer}
-  .tab-active{background:#0f172a;color:#fff}
-  .tab-inactive{background:#e7edf5;color:#111827}
-  .dz{border:2px dashed #cbd5e1;border-radius:1rem; padding:1.25rem; text-align:center; color:#475569}
-  .dz.hover{background:#f8fafc}
-  .card{border:1px solid #e2e8f0; border-radius:1rem; background:#fff; padding:1rem 1.25rem; box-shadow:0 10px 28px rgba(0,0,0,.06)}
-  .pill{background:#0f766e; color:#fff; font-weight:600; font-size:.75rem; border-radius:9999px; padding:.15rem .6rem}
-  .table th{background:#f1f5f9; font-weight:600; text-align:left; padding:.55rem .6rem}
-  .table td{border-top:1px solid #e2e8f0; padding:.5rem .6rem}
-  .kpi{border:1px solid #e2e8f0; border-radius:1rem; background:#fff; padding:1rem; text-align:center}
-  .toggle{appearance:none; width:44px; height:24px; border-radius:9999px; background:#e5e7eb; position:relative; outline:none; cursor:pointer}
-  .toggle:checked{background:#0f766e}
-  .toggle:before{content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; background:#fff; border-radius:9999px; transition:transform .18s ease}
-  .toggle:checked:before{transform:translateX(20px)}
-  .sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0}
-</style>
+  <!-- OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <!-- FileSaver for CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <style>
+    html,body{height:100%}
+    .btn{ @apply inline-flex items-center justify-center rounded-lg px-4 py-2 font-medium shadow-soft transition;
+          background: linear-gradient(180deg,#12b3ac 0%,#0f766e 100%); color:white }
+    .btn:hover{filter:brightness(1.05)}
+    .btn-ghost{@apply rounded-lg px-4 py-2 border border-slate-300 text-slate-800 hover:bg-slate-50}
+    .card{@apply rounded-2xl border border-slate-200 bg-white p-5 shadow-soft}
+    .tab{ @apply px-4 py-2 rounded-full text-sm font-medium cursor-pointer }
+    .tab-active{@apply bg-slate-900 text-white}
+    .tab-inactive{@apply bg-slate-100 text-slate-700 hover:bg-slate-200}
+    .kpi{ @apply text-center rounded-xl bg-slate-50 p-4 border border-slate-200 }
+    .table{ @apply w-full text-sm border border-slate-200 rounded-xl overflow-hidden }
+    .table th{ @apply bg-slate-100 text-left px-3 py-2 }
+    .table td{ @apply border-t border-slate-200 px-3 py-2 }
+  </style>
 </head>
+<body class="bg-white text-slate-900 font-sans">
 
-<body class="bg-slate-50 text-slate-900 font-sans">
-<header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
-  <div class="mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <span class="inline-block h-8 w-8 rounded-full bg-brand-600"></span>
-      <span class="font-semibold">Coach Desk — Game Card Scanner</span>
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="h-8 w-8 rounded-full bg-brand-600 inline-block"></span>
+        <span class="font-semibold">Coach Desk — Game Card Scanner</span>
+      </div>
+      <nav class="hidden md:flex gap-2">
+        <button class="tab tab-active" data-tab="scan">Scan</button>
+        <button class="tab tab-inactive" data-tab="matches">Matches</button>
+        <button class="tab tab-inactive" data-tab="standings">Standings</button>
+        <button class="tab tab-inactive" data-tab="refs">Refs</button>
+        <button class="tab tab-inactive" data-tab="export">Import/Export</button>
+        <button class="tab tab-inactive" data-tab="settings">Settings</button>
+      </nav>
     </div>
-    <nav class="hidden md:flex gap-2">
-      <button class="tab tab-active" data-tab="scan">Scan</button>
-      <button class="tab tab-inactive" data-tab="matches">Matches</button>
-      <button class="tab tab-inactive" data-tab="standings">Standings</button>
-      <button class="tab tab-inactive" data-tab="refs">Refs</button>
-      <button class="tab tab-inactive" data-tab="io">Import/Export</button>
-      <button class="tab tab-inactive" data-tab="settings">Settings</button>
-    </nav>
-  </div>
-</header>
+  </header>
 
-<main class="mx-auto max-w-7xl px-4 py-8 space-y-8">
-
-  <!-- SCAN -->
-  <section id="tab-scan" class="space-y-6">
-    <!-- stepper -->
-    <div class="flex flex-wrap items-center gap-3 text-sm">
-      <span class="pill">1. Upload</span>
-      <span class="pill">2. OCR</span>
-      <span class="pill bg-slate-900">3. Review & Save</span>
-    </div>
-
-    <div class="grid lg:grid-cols-2 gap-6">
-      <!-- FRONT -->
-      <div class="card">
-        <div class="flex items-center justify-between">
+  <!-- Main wrapper -->
+  <main class="mx-auto max-w-7xl px-4 py-8 space-y-8">
+    <!-- Scan -->
+    <section id="tab-scan" class="grid gap-6">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Front of card -->
+        <div class="card">
           <h2 class="text-lg font-semibold">Front of Game Card</h2>
-          <label class="btn-ghost cursor-pointer">
-            <input id="frontInput" type="file" accept="image/*" class="sr" capture="environment">
-            Upload
-          </label>
-        </div>
-        <div id="frontDrop" class="dz mt-3">Drop front image here</div>
-        <div class="mt-3 grid grid-cols-2 gap-3">
-          <img id="frontPreview" alt="" class="hidden w-full h-40 object-cover rounded-lg border"/>
-          <div class="w-full">
-            <div class="text-xs text-slate-600">OCR Progress</div>
-            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-1">
-              <div id="frontProg" class="h-2 bg-brand-600 w-0"></div>
-            </div>
-            <button id="toggleFrontText" class="mt-3 text-sm text-brand-600 hover:underline">Show detected text</button>
+          <input id="frontInput" type="file" accept="image/*" capture="environment" class="mt-2 block w-full border p-2 rounded-lg"/>
+          <div id="frontDrop" class="mt-3 rounded-xl border-2 border-dashed border-slate-300 p-6 text-center text-slate-500">
+            Drop front image here
           </div>
+          <div class="mt-2 text-sm text-slate-600">OCR Progress</div>
+          <progress id="frontProgress" class="w-full" value="0" max="100"></progress>
+          <button id="frontShow" class="btn-ghost mt-2 hidden">Show detected text</button>
+          <pre id="frontText" class="hidden text-xs bg-slate-50 p-2 rounded"></pre>
         </div>
-        <pre id="frontText" class="hidden mt-3 bg-slate-900 text-slate-100 p-3 rounded-lg overflow-auto max-h-48 text-xs"></pre>
+
+        <!-- Back of card -->
+        <div class="card">
+          <h2 class="text-lg font-semibold">Back of Game Card</h2>
+          <input id="backInput" type="file" accept="image/*" capture="environment" class="mt-2 block w-full border p-2 rounded-lg"/>
+          <div id="backDrop" class="mt-3 rounded-xl border-2 border-dashed border-slate-300 p-6 text-center text-slate-500">
+            Drop back image here
+          </div>
+          <div class="mt-2 text-sm text-slate-600">OCR Progress</div>
+          <progress id="backProgress" class="w-full" value="0" max="100"></progress>
+          <button id="backShow" class="btn-ghost mt-2 hidden">Show detected text</button>
+          <pre id="backText" class="hidden text-xs bg-slate-50 p-2 rounded"></pre>
+        </div>
       </div>
 
-      <!-- BACK -->
+      <!-- Match form -->
+      <div class="card">
+        <h2 class="text-lg font-semibold">Match Review & Entry</h2>
+        <p class="text-sm text-slate-600">Fields below autofill from OCR. Review and adjust before saving.</p>
+
+        <form id="matchForm" class="grid grid-cols-2 gap-3 mt-4">
+          <label class="col-span-1">
+            <span class="text-xs text-slate-600">Game ID</span>
+            <input name="gameId" class="w-full border rounded-lg p-2" placeholder="e.g., 12-3-104" required />
+          </label>
+          <label class="col-span-1">
+            <span class="text-xs text-slate-600">Date</span>
+            <input name="date" type="date" class="w-full border rounded-lg p-2" required />
+          </label>
+          <label class="col-span-1">
+            <span class="text-xs text-slate-600">Division</span>
+            <input name="division" class="w-full border rounded-lg p-2" placeholder="12U Boys" />
+          </label>
+          <label class="col-span-1">
+            <span class="text-xs text-slate-600">Field</span>
+            <input name="field" class="w-full border rounded-lg p-2" placeholder="Field 3" />
+          </label>
+          <label class="col-span-1">
+            <span class="text-xs text-slate-600">Home Team</span>
+            <input name="homeTeam" class="w-full border rounded-lg p-2" required />
+          </label>
+          <label class="col-span-1">
+            <span class="text-xs text-slate-600">Away Team</span>
+            <input name="awayTeam" class="w-full border rounded-lg p-2" required />
+          </label>
+        </form>
+
+        <!-- Scores + Refs -->
+        <div class="grid grid-cols-2 gap-3 mt-4">
+          <label>
+            <span class="text-xs text-slate-600">Home Score</span>
+            <input name="homeScore" type="number" min="0" class="w-full border rounded-lg p-2" value="0"/>
+          </label>
+          <label>
+            <span class="text-xs text-slate-600">Away Score</span>
+            <input name="awayScore" type="number" min="0" class="w-full border rounded-lg p-2" value="0"/>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mt-4">
+          <input name="cr" placeholder="Center Ref" class="border rounded-lg p-2"/>
+          <input name="ar1" placeholder="Assistant Ref 1" class="border rounded-lg p-2"/>
+          <input name="ar2" placeholder="Assistant Ref 2" class="border rounded-lg p-2"/>
+        </div>
+
+        <!-- Rosters -->
+        <div class="grid md:grid-cols-2 gap-6 mt-6">
+          <div>
+            <h3 class="font-semibold">Home Roster & Quarters</h3>
+            <p class="text-xs text-slate-600">Track per quarter (✓ played / empty = sat)</p>
+            <table class="table mt-2">
+              <thead>
+                <tr><th>#</th><th>Absent</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>GK</th></tr>
+              </thead>
+              <tbody id="homeRoster"></tbody>
+            </table>
+            <button id="addHomePlayer" class="btn-ghost mt-2">Add Player</button>
+          </div>
+
+          <div>
+            <h3 class="font-semibold">Away Roster & Quarters</h3>
+            <p class="text-xs text-slate-600">Track per quarter (✓ played / empty = sat)</p>
+            <table class="table mt-2">
+              <thead>
+                <tr><th>#</th><th>Absent</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>GK</th></tr>
+              </thead>
+              <tbody id="awayRoster"></tbody>
+            </table>
+            <button id="addAwayPlayer" class="btn-ghost mt-2">Add Player</button>
+          </div>
+        </div>
+
+        <!-- Goals & Events -->
+        <div class="mt-6">
+          <h3 class="font-semibold">Goals & Events</h3>
+          <table class="table mt-2">
+            <thead>
+              <tr><th>Team</th><th>Player #</th><th>Quarter</th><th>Minute</th></tr>
+            </thead>
+            <tbody id="goalsTable"></tbody>
+          </table>
+          <button id="addGoal" class="btn-ghost mt-2">Add Goal</button>
+          <textarea name="notes" rows="2" placeholder="Cards, injuries, highlights" class="mt-3 w-full border rounded-lg p-2"></textarea>
+        </div>
+
+        <div class="mt-6 flex gap-3">
+          <button id="btnSave" class="btn">Save Match</button>
+          <button id="btnClear" class="btn-ghost">Start New</button>
+        </div>
+      </div>
+    </section>
+    <!-- Matches -->
+    <section id="tab-matches" class="hidden">
       <div class="card">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold">Back of Game Card</h2>
-          <label class="btn-ghost cursor-pointer">
-            <input id="backInput" type="file" accept="image/*" class="sr" capture="environment">
-            Upload
+          <h2 class="text-lg font-semibold">Saved Matches</h2>
+          <div class="flex gap-2">
+            <input id="searchMatch" placeholder="Search team or gameId…" class="border rounded-lg p-2"/>
+            <button id="btnRecalc" class="btn-ghost">Recalculate Standings</button>
+          </div>
+        </div>
+        <div class="mt-4 overflow-x-auto">
+          <table class="table" id="matchesTable">
+            <thead>
+              <tr>
+                <th>Date</th><th>Game</th><th>Division</th><th>Field</th>
+                <th>Home</th><th>Score</th><th>Away</th>
+                <th>CR</th><th>AR1</th><th>AR2</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Standings -->
+    <section id="tab-standings" class="hidden">
+      <div class="grid md:grid-cols-4 gap-6">
+        <div class="kpi"><div class="text-2xl font-semibold" id="kpiGames">0</div><div class="text-slate-600 text-sm">Games</div></div>
+        <div class="kpi"><div class="text-2xl font-semibold" id="kpiGoals">0</div><div class="text-slate-600 text-sm">Goals</div></div>
+        <div class="kpi"><div class="text-2xl font-semibold" id="kpiRefs">0</div><div class="text-slate-600 text-sm">Ref Assignments</div></div>
+        <div class="kpi"><div class="text-2xl font-semibold" id="kpiDivs">0</div><div class="text-slate-600 text-sm">Divisions</div></div>
+      </div>
+      <div class="card mt-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Standings</h2>
+          <div class="text-sm text-slate-600">W=3, D=1, L=0</div>
+        </div>
+        <div class="mt-4 overflow-x-auto">
+          <table class="table" id="standingsTable">
+            <thead>
+              <tr>
+                <th>Division</th><th>Team</th><th>GP</th><th>W</th><th>D</th><th>L</th>
+                <th>GF</th><th>GA</th><th>GD</th><th>Pts</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Refs -->
+    <section id="tab-refs" class="hidden">
+      <div class="card">
+        <h2 class="text-lg font-semibold">Referee Assignments</h2>
+        <div class="mt-4 overflow-x-auto">
+          <table class="table" id="refsTable">
+            <thead>
+              <tr><th>Name</th><th>CR</th><th>AR1</th><th>AR2</th><th>Total</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Import/Export -->
+    <section id="tab-export" class="hidden grid lg:grid-cols-2 gap-6">
+      <div class="card">
+        <h2 class="text-lg font-semibold">Export</h2>
+        <p class="text-sm text-slate-600">Save your data</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button class="btn" id="exportMatches">Matches CSV</button>
+          <button class="btn" id="exportStandings">Standings CSV</button>
+          <button class="btn" id="exportRefs">Refs CSV</button>
+          <button class="btn-ghost" id="exportJSON">Backup JSON</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="text-lg font-semibold">Import Schedule (CSV)</h2>
+        <p class="text-sm text-slate-600">Format: gameId,date,division,field,homeTeam,awayTeam</p>
+        <input id="importCSV" type="file" accept=".csv" class="mt-4 border rounded-lg p-2"/>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="tab-settings" class="hidden">
+      <div class="card">
+        <h2 class="text-lg font-semibold">Settings</h2>
+        <div class="mt-4 grid sm:grid-cols-2 gap-4">
+          <label class="flex items-center gap-3">
+            <input id="optAutoId" type="checkbox" class="h-4 w-4 border rounded"/>
+            <span class="text-sm">Auto-generate Game IDs if missing</span>
+          </label>
+          <label class="flex items-center gap-3">
+            <input id="optLocalOnly" type="checkbox" class="h-4 w-4 border rounded" checked/>
+            <span class="text-sm">Store data locally (browser only)</span>
+          </label>
+          <label class="flex items-center gap-3">
+            <input id="optDark" type="checkbox" class="h-4 w-4 border rounded"/>
+            <span class="text-sm">Dark mode</span>
           </label>
         </div>
-        <div id="backDrop" class="dz mt-3">Drop back image here</div>
-        <div class="mt-3 grid grid-cols-2 gap-3">
-          <img id="backPreview" alt="" class="hidden w-full h-40 object-cover rounded-lg border"/>
-          <div class="w-full">
-            <div class="text-xs text-slate-600">OCR Progress</div>
-            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-1">
-              <div id="backProg" class="h-2 bg-brand-600 w-0"></div>
-            </div>
-            <button id="toggleBackText" class="mt-3 text-sm text-brand-600 hover:underline">Show detected text</button>
-          </div>
-        </div>
-        <pre id="backText" class="hidden mt-3 bg-slate-900 text-slate-100 p-3 rounded-lg overflow-auto max-h-48 text-xs"></pre>
-      </div>
-    </div>
-
-    <!-- REVIEW / MATCH EDITOR -->
-    <div class="card">
-      <h3 class="text-lg font-semibold">Match Review & Entry</h3>
-      <p class="text-sm text-slate-600">Fields below autofill from OCR. Review and adjust before saving.</p>
-
-      <!-- General -->
-      <div class="mt-4 grid sm:grid-cols-3 gap-3">
-        <label><span class="text-xs text-slate-600">Game ID</span><input id="m-id" class="w-full border rounded-lg p-2" placeholder="e.g., 12-3-104"/></label>
-        <label><span class="text-xs text-slate-600">Date</span><input id="m-date" type="date" class="w-full border rounded-lg p-2"/></label>
-        <label><span class="text-xs text-slate-600">Division</span><input id="m-div" class="w-full border rounded-lg p-2" placeholder="12U Boys"/></label>
-        <label><span class="text-xs text-slate-600">Field</span><input id="m-field" class="w-full border rounded-lg p-2" placeholder="Field 3"/></label>
-        <label><span class="text-xs text-slate-600">Home Team</span><input id="m-home" class="w-full border rounded-lg p-2"/></label>
-        <label><span class="text-xs text-slate-600">Away Team</span><input id="m-away" class="w-full border rounded-lg p-2"/></label>
-      </div>
-
-      <!-- Score + Refs -->
-      <div class="mt-4 grid sm:grid-cols-3 gap-3">
-        <label><span class="text-xs text-slate-600">Home Score</span><input id="m-hs" type="number" min="0" class="w-full border rounded-lg p-2" value="0"/></label>
-        <label><span class="text-xs text-slate-600">Away Score</span><input id="m-as" type="number" min="0" class="w-full border rounded-lg p-2" value="0"/></label>
-        <div class="rounded-lg bg-slate-50 p-2 text-sm">Points: W=3, D=1, L=0 (configurable in Settings)</div>
-
-        <label><span class="text-xs text-slate-600">Center Ref (CR)</span><input id="m-cr" class="w-full border rounded-lg p-2"/></label>
-        <label><span class="text-xs text-slate-600">Assistant Ref 1 (AR1)</span><input id="m-ar1" class="w-full border rounded-lg p-2"/></label>
-        <label><span class="text-xs text-slate-600">Assistant Ref 2 (AR2)</span><input id="m-ar2" class="w-full border rounded-lg p-2"/></label>
-      </div>
-
-      <!-- Rosters -->
-      <div class="mt-6 grid lg:grid-cols-2 gap-6">
-        <div>
-          <div class="flex items-center justify-between">
-            <h4 class="font-semibold">Home Roster & Quarters</h4>
-            <button class="btn-ghost text-sm" id="addHomePlayer">Add Player</button>
-          </div>
-          <div class="text-xs text-slate-600 mb-2">Track play/sit per quarter and GK minutes.</div>
-          <table class="w-full table text-sm" id="homeRoster">
-            <thead><tr><th>#</th><th>Absent</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>GK mins</th><th></th></tr></thead>
-            <tbody></tbody>
-          </table>
-          <div class="text-xs text-slate-600 mt-1">Played = check the quarter; leave unchecked for “sat”.</div>
-        </div>
-        <div>
-          <div class="flex items-center justify-between">
-            <h4 class="font-semibold">Away Roster & Quarters</h4>
-            <button class="btn-ghost text-sm" id="addAwayPlayer">Add Player</button>
-          </div>
-          <div class="text-xs text-slate-600 mb-2">Track play/sit per quarter and GK minutes.</div>
-          <table class="w-full table text-sm" id="awayRoster">
-            <thead><tr><th>#</th><th>Absent</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>GK mins</th><th></th></tr></thead>
-            <tbody></tbody>
-          </table>
+        <div class="mt-6 flex gap-2">
+          <button id="wipe" class="btn-ghost">Wipe All Local Data</button>
         </div>
       </div>
+    </section>
+  </main>
 
-      <!-- Goals -->
-      <div class="mt-6">
-        <div class="flex items-center justify-between">
-          <h4 class="font-semibold">Goals & Events</h4>
-          <button class="btn-ghost text-sm" id="addGoal">Add Goal</button>
-        </div>
-        <table class="w-full table text-sm mt-2" id="goalsTable">
-          <thead><tr><th>Team</th><th>Player #</th><th>Quarter</th><th>Minute</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <!-- Notes -->
-      <div class="mt-4">
-        <label class="block"><span class="text-xs text-slate-600">Notes (cards, injuries, highlights)</span>
-          <textarea id="m-notes" rows="3" class="w-full border rounded-lg p-2"></textarea>
-        </label>
-      </div>
-
-      <div class="mt-5 flex flex-wrap gap-3">
-        <button id="saveMatch" class="btn">Save Match</button>
-        <button id="clearMatch" class="btn-ghost">Start New</button>
-      </div>
+  <footer class="border-t border-slate-200">
+    <div class="mx-auto max-w-7xl px-4 py-8 text-sm text-slate-600 flex items-center justify-between">
+      <span>© <span id="year"></span> Coach Desk</span>
+      <span class="chip">Offline-ready</span>
     </div>
-  </section>
+  </footer>
 
-  <!-- MATCHES -->
-  <section id="tab-matches" class="hidden space-y-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <input id="matchSearch" placeholder="Search team or game ID…" class="border rounded-lg p-2 w-64"/>
-      <select id="filterDiv" class="border rounded-lg p-2">
-        <option value="">All divisions</option>
-      </select>
-    </div>
-    <div class="card">
-      <h3 class="text-lg font-semibold">Saved Matches</h3>
-      <div class="mt-3 overflow-x-auto">
-        <table class="w-full table text-sm" id="matchesTable">
-          <thead>
-            <tr><th>Date</th><th>Game</th><th>Division</th><th>Home</th><th></th><th>Away</th><th>CR</th><th>AR1</th><th>AR2</th><th>Score</th><th>Actions</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
+  <!-- JavaScript -->
+  <script>
+  const $ = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
+  const LS_KEY='coachdesk:data';
+  const state=JSON.parse(localStorage.getItem(LS_KEY)||'{"matches":[]}');
+  const saveState=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
 
-  <!-- STANDINGS -->
-  <section id="tab-standings" class="hidden space-y-4">
-    <div class="grid sm:grid-cols-3 gap-4">
-      <div class="kpi"><div class="text-2xl font-semibold" id="kpiGames">0</div><div class="text-slate-600 text-sm">Games Recorded</div></div>
-      <div class="kpi"><div class="text-2xl font-semibold" id="kpiGoals">0</div><div class="text-slate-600 text-sm">Total Goals</div></div>
-      <div class="kpi"><div class="text-2xl font-semibold" id="kpiRefs">0</div><div class="text-slate-600 text-sm">Ref Assignments</div></div>
-    </div>
-    <div class="card">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Standings</h3>
-        <div class="text-sm text-slate-600">Points: <span id="ptsRule">W=3, D=1, L=0</span></div>
-      </div>
-      <div class="mt-3 overflow-x-auto">
-        <table class="w-full table text-sm" id="standingsTable">
-          <thead>
-            <tr><th>Division</th><th>Team</th><th>GP</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- REFS -->
-  <section id="tab-refs" class="hidden">
-    <div class="card">
-      <h3 class="text-lg font-semibold">Referee Assignments</h3>
-      <div class="mt-3 overflow-x-auto">
-        <table class="w-full table text-sm" id="refsTable">
-          <thead><tr><th>Name</th><th>CR</th><th>AR</th><th>Total</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- IO -->
-  <section id="tab-io" class="hidden grid lg:grid-cols-2 gap-6">
-    <div class="card">
-      <h3 class="text-lg font-semibold">Export</h3>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <button class="btn" id="exMatches">Matches CSV</button>
-        <button class="btn" id="exGoals">Goals CSV</button>
-        <button class="btn" id="exRefs">Refs CSV</button>
-        <button class="btn-ghost" id="exJSON">Backup JSON</button>
-      </div>
-    </div>
-    <div class="card">
-      <h3 class="text-lg font-semibold">Import Schedule (CSV)</h3>
-      <p class="text-sm text-slate-600">Headers: gameId,date,division,field,homeTeam,awayTeam</p>
-      <input id="impCSV" type="file" accept=".csv" class="mt-3 border rounded-lg p-2"/>
-    </div>
-  </section>
-
-  <!-- SETTINGS -->
-  <section id="tab-settings" class="hidden space-y-4">
-    <div class="card">
-      <h3 class="text-lg font-semibold">Preferences</h3>
-      <div class="grid md:grid-cols-3 gap-4 mt-3">
-        <label class="flex items-center gap-3"><input id="optDark" type="checkbox" class="toggle"><span>Dark Mode</span></label>
-        <label class="flex items-center gap-3"><input id="optAutoId" type="checkbox" class="toggle" checked><span>Auto-generate Game IDs</span></label>
-        <label class="flex items-center gap-3"><input id="optLocal" type="checkbox" class="toggle" checked><span>Store Locally (browser)</span></label>
-        <label><span class="text-xs text-slate-600">Points (W/D/L)</span>
-          <div class="flex gap-2"><input id="ptsW" type="number" class="border rounded-lg p-2 w-16" value="3"><input id="ptsD" type="number" class="border rounded-lg p-2 w-16" value="1"><input id="ptsL" type="number" class="border rounded-lg p-2 w-16" value="0"></div>
-        </label>
-        <label><span class="text-xs text-slate-600">Quarter length (minutes)</span>
-          <input id="qLen" type="number" class="border rounded-lg p-2 w-28" value="15">
-        </label>
-      </div>
-      <div class="mt-4 flex gap-2">
-        <button id="wipeAll" class="btn-ghost">Wipe All Local Data</button>
-        <button id="savePrefs" class="btn">Save Settings</button>
-      </div>
-    </div>
-  </section>
-</main>
-
-<footer class="border-t border-slate-200">
-  <div class="mx-auto max-w-7xl px-4 py-8 text-sm text-slate-600 flex items-center justify-between">
-    <span>© <span id="year"></span> Coach Desk</span>
-    <span class="chip">Offline-friendly</span>
-  </div>
-</footer>
-
-<script>
-/* ---------- helpers ---------- */
-const $  = (s, r=document)=>r.querySelector(s);
-const $$ = (s, r=document)=>[...r.querySelectorAll(s)];
-const byId = id => document.getElementById(id);
-const LS_KEY = 'coachdesk:v2';
-const PREFS_KEY = 'coachdesk:prefs';
-const uid = () => Math.random().toString(36).slice(2,8);
-const toCSV = rows => rows.map(r=>r.map(v=>{
-  const s = String(v ?? '');
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
-}).join(',')).join('\n');
-
-let state = JSON.parse(localStorage.getItem(LS_KEY) || '{"matches":[]}');
-let prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || '{"pts":[3,1,0],"qLen":15,"dark":false,"autoId":true}');
-
-/* ---------- tabs ---------- */
-const sections = {scan:'#tab-scan', matches:'#tab-matches', standings:'#tab-standings', refs:'#tab-refs', io:'#tab-io', settings:'#tab-settings'};
-$$('nav .tab').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    $$('nav .tab').forEach(b=>b.classList.replace('tab-active','tab-inactive'));
-    btn.classList.replace('tab-inactive','tab-active');
-    Object.values(sections).forEach(sel=>$(sel).classList.add('hidden'));
-    $(sections[btn.dataset.tab]).classList.remove('hidden');
-    if(btn.dataset.tab==='matches') renderMatches();
-    if(btn.dataset.tab==='standings') recompute();
-    if(btn.dataset.tab==='refs') renderRefs();
-  });
-});
-
-/* ---------- OCR pipeline (front/back, auto-run) ---------- */
-const ocr = {frontText:'', backText:''};
-const frontInput = byId('frontInput'), backInput = byId('backInput');
-const frontDrop  = byId('frontDrop'),  backDrop  = byId('backDrop');
-const frontPrev  = byId('frontPreview'), backPrev = byId('backPreview');
-const frontProg  = byId('frontProg'),   backProg  = byId('backProg');
-const frontTextP = byId('frontText'),   backTextP = byId('backText');
-
-function attachDZ(drop, input, onFile){
-  drop.addEventListener('dragover', e=>{e.preventDefault();drop.classList.add('hover');});
-  drop.addEventListener('dragleave', ()=>drop.classList.remove('hover'));
-  drop.addEventListener('drop', e=>{e.preventDefault();drop.classList.remove('hover'); if(e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);});
-  input.addEventListener('change', e=> { if(e.target.files[0]) onFile(e.target.files[0]); });
-}
-attachDZ(frontDrop, frontInput, f=>handleImage('front', f));
-attachDZ(backDrop,  backInput,  f=>handleImage('back',  f));
-
-async function handleImage(side, file){
-  const img = side==='front'?frontPrev:backPrev;
-  const prog= side==='front'?frontProg:backProg;
-  const pre = side==='front'?frontTextP:backTextP;
-
-  const url = URL.createObjectURL(file);
-  img.src = url; img.classList.remove('hidden');
-
-  prog.style.width = '0%';
-  pre.textContent = '';
-  // Auto-run OCR
-  const {data} = await Tesseract.recognize(file,'eng',{logger:m=>{
-    if(m.status==='recognizing text'){ prog.style.width = Math.round(m.progress*100)+'%'; }
-  }});
-  (side==='front') ? (ocr.frontText=data.text) : (ocr.backText=data.text);
-  pre.textContent = data.text;
-
-  // Parse combined text
-  parseToForm(ocr.frontText + '\n' + ocr.backText);
-}
-byId('toggleFrontText').onclick = ()=> frontTextP.classList.toggle('hidden');
-byId('toggleBackText').onclick  = ()=> backTextP.classList.toggle('hidden');
-
-/* ---------- parse to form ---------- */
-function parseToForm(text){
-  const get=(re, g=1)=> (text.match(re)||[])[g] || '';
-  const set=(id,val)=> { const el=byId(id); if(val && !el.value) el.value=val; };
-
-  set('m-id',   get(/Game\s*#?\s*[:\-]?\s*([A-Za-z0-9\-]+)/i) || (prefs.autoId ? `G-${uid()}`:''));
-  // date detection (yyyy-mm-dd or mm/dd/yy)
-  const d = get(/(\d{4}[-\/]\d{1,2}[-\/]\d{1,2}|\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/);
-  if(d && !byId('m-date').value){
-    const parts=d.replace(/[^0-9\/\-]/g,'').split(/[\/\-]/).map(n=>+n);
-    if(parts[0]>1900) byId('m-date').value=[parts[0], String(parts[1]).padStart(2,'0'), String(parts[2]).padStart(2,'0')].join('-');
-  }
-  set('m-div',  get(/(6U|8U|10U|12U|14U|16U|19U)\s*(Boys|Girls|Coed)?/i));
-  set('m-field',get(/Field\s*[:\-]?\s*([A-Za-z0-9\-]+)/i));
-  set('m-home', get(/Home\s*Team\s*[:\-]?\s*([A-Za-z0-9 \-']{2,})/i));
-  set('m-away', get(/Away\s*Team\s*[:\-]?\s*([A-Za-z0-9 \-']{2,})/i));
-  set('m-hs',   get(/Home\s*(?:Score|Goals?)\s*[:\-]?\s*(\d{1,2})/i));
-  set('m-as',   get(/Away\s*(?:Score|Goals?)\s*[:\-]?\s*(\d{1,2})/i));
-  set('m-cr',   get(/(?:Ref|CR|Center)\s*[:\-]?\s*([A-Za-z .'\-]+)/i));
-  set('m-ar1',  get(/AR1?\s*[:\-]?\s*([A-Za-z .'\-]+)/i));
-  set('m-ar2',  get(/AR2?\s*[:\-]?\s*([A-Za-z .'\-]+)/i));
-}
-
-/* ---------- roster + goals editors ---------- */
-function rowPlayer(team, num=''){
-  const tr=document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="text" class="border rounded p-1 w-14 text-center" value="${num}"></td>
-    <td class="text-center"><input type="checkbox" class="abs"></td>
-    <td class="text-center"><input type="checkbox" class="q q1"></td>
-    <td class="text-center"><input type="checkbox" class="q q2"></td>
-    <td class="text-center"><input type="checkbox" class="q q3"></td>
-    <td class="text-center"><input type="checkbox" class="q q4"></td>
-    <td><input type="number" min="0" class="border rounded p-1 w-20 gk" placeholder="mins"></td>
-    <td><button class="text-red-600 hover:underline remove">Delete</button></td>`;
-  tr.querySelector('.remove').onclick=()=> tr.remove();
-  return tr;
-}
-function addHomePlayer(num){ byId('homeRoster').querySelector('tbody').appendChild(rowPlayer('home',num)); }
-function addAwayPlayer(num){ byId('awayRoster').querySelector('tbody').appendChild(rowPlayer('away',num)); }
-byId('addHomePlayer').onclick=()=>addHomePlayer('');
-byId('addAwayPlayer').onclick=()=>addAwayPlayer('');
-
-function rowGoal(){
-  const tr=document.createElement('tr');
-  tr.innerHTML=`
-    <td>
-      <select class="border rounded p-1 team"><option value="home">Home</option><option value="away">Away</option></select>
-    </td>
-    <td><input type="text" class="border rounded p-1 w-20 num"></td>
-    <td>
-      <select class="border rounded p-1 q"><option>Q1</option><option>Q2</option><option>Q3</option><option>Q4</option></select>
-    </td>
-    <td><input type="number" min="0" class="border rounded p-1 w-20 min"></td>
-    <td><button class="text-red-600 hover:underline remove">Delete</button></td>`;
-  tr.querySelector('.remove').onclick=()=>tr.remove();
-  return tr;
-}
-byId('addGoal').onclick=()=> byId('goalsTable').querySelector('tbody').appendChild(rowGoal());
-
-/* ---------- collect form -> match ---------- */
-function collectRoster(tbody){
-  return [...tbody.querySelectorAll('tr')].map(tr=>{
-    const tds=tr.querySelectorAll('td');
-    return {
-      num: tds[0].querySelector('input').value.trim(),
-      absent: tds[1].querySelector('input').checked,
-      q:{Q1:tds[2].querySelector('input').checked, Q2:tds[3].querySelector('input').checked, Q3:tds[4].querySelector('input').checked, Q4:tds[5].querySelector('input').checked},
-      gk: +tds[6].querySelector('input').value || 0
-    };
-  });
-}
-function collectGoals(){
-  return [...byId('goalsTable').querySelectorAll('tbody tr')].map(tr=>{
-    return {
-      team: tr.querySelector('.team').value,
-      num: tr.querySelector('.num').value.trim(),
-      q: tr.querySelector('.q').value,
-      min: +tr.querySelector('.min').value || 0
-    };
-  });
-}
-
-function resetEditor(){
-  ['m-id','m-date','m-div','m-field','m-home','m-away','m-hs','m-as','m-cr','m-ar1','m-ar2','m-notes'].forEach(id=>byId(id).value='');
-  byId('homeRoster').querySelector('tbody').innerHTML='';
-  byId('awayRoster').querySelector('tbody').innerHTML='';
-  byId('goalsTable').querySelector('tbody').innerHTML='';
-  ocr.frontText=ocr.backText=''; frontTextP.textContent=''; backTextP.textContent='';
-  frontPrev.classList.add('hidden'); backPrev.classList.add('hidden');
-  frontProg.style.width='0%'; backProg.style.width='0%';
-}
-byId('clearMatch').onclick=resetEditor;
-
-/* ---------- save match ---------- */
-byId('saveMatch').onclick=()=>{
-  const m = {
-    id: byId('m-id').value || (prefs.autoId?`G-${uid()}`:''),
-    date: byId('m-date').value,
-    division: byId('m-div').value.trim(),
-    field: byId('m-field').value.trim(),
-    home: byId('m-home').value.trim(),
-    away: byId('m-away').value.trim(),
-    hs: +byId('m-hs').value || 0,
-    as: +byId('m-as').value || 0,
-    refs: {cr:byId('m-cr').value.trim(), ar1:byId('m-ar1').value.trim(), ar2:byId('m-ar2').value.trim()},
-    roster: {
-      home: collectRoster(byId('homeRoster').querySelector('tbody')),
-      away: collectRoster(byId('awayRoster').querySelector('tbody')),
-      qLen: prefs.qLen
-    },
-    goals: collectGoals(),
-    notes: byId('m-notes').value.trim()
-  };
-  if(!m.date || !m.home || !m.away){ alert('Please fill Date, Home, and Away.'); return; }
-  const idx = state.matches.findIndex(x=>x.id===m.id);
-  if(idx>=0) state.matches[idx]=m; else state.matches.push(m);
-  localStorage.setItem(LS_KEY, JSON.stringify(state));
-  alert('Match saved.');
-  renderMatches(); recompute(); renderRefs();
-};
-
-/* ---------- matches list ---------- */
-function renderMatches(){
-  const tb = byId('matchesTable').querySelector('tbody');
-  tb.innerHTML='';
-  const q = byId('matchSearch').value?.toLowerCase() || '';
-  const divFilter = byId('filterDiv').value || '';
-  const divisions = new Set();
-
-  state.matches
-    .filter(m => (!q || [m.id,m.home,m.away].join(' ').toLowerCase().includes(q)) && (!divFilter || m.division===divFilter))
-    .sort((a,b)=> (a.date||'').localeCompare(b.date||''))
-    .forEach(m=>{
-      divisions.add(m.division||'');
-      const tr=document.createElement('tr');
-      tr.innerHTML=`
-        <td>${m.date||''}</td>
-        <td>${m.id||''}</td>
-        <td>${m.division||''}</td>
-        <td>${m.home}</td>
-        <td class="text-center">vs</td>
-        <td>${m.away}</td>
-        <td>${m.refs.cr||''}</td>
-        <td>${m.refs.ar1||''}</td>
-        <td>${m.refs.ar2||''}</td>
-        <td><span class="chip">${m.hs} - ${m.as}</span></td>
-        <td>
-          <button class="text-brand-600 hover:underline edit">Edit</button> ·
-          <button class="text-red-600 hover:underline del">Delete</button>
-        </td>`;
-      tr.querySelector('.edit').onclick=()=>loadMatch(m.id);
-      tr.querySelector('.del').onclick=()=>{ if(confirm('Delete match '+m.id+'?')){ state.matches=state.matches.filter(x=>x.id!==m.id); localStorage.setItem(LS_KEY, JSON.stringify(state)); renderMatches(); recompute(); renderRefs(); } };
-      tb.appendChild(tr);
-    });
-
-  // populate division filter
-  const sel = byId('filterDiv');
-  const current = sel.value;
-  sel.innerHTML='<option value="">All divisions</option>' + [...divisions].filter(Boolean).map(d=>`<option>${d}</option>`).join('');
-  sel.value = current || '';
-}
-byId('matchSearch').addEventListener('input', renderMatches);
-byId('filterDiv').addEventListener('change', renderMatches);
-
-function loadMatch(id){
-  const m = state.matches.find(x=>x.id===id); if(!m) return;
-  byId('m-id').value=m.id; byId('m-date').value=m.date; byId('m-div').value=m.division||''; byId('m-field').value=m.field||'';
-  byId('m-home').value=m.home; byId('m-away').value=m.away;
-  byId('m-hs').value=m.hs; byId('m-as').value=m.as;
-  byId('m-cr').value=m.refs.cr||''; byId('m-ar1').value=m.refs.ar1||''; byId('m-ar2').value=m.refs.ar2||'';
-  byId('homeRoster').querySelector('tbody').innerHTML=''; m.roster?.home?.forEach(p=>addHomePlayer(p.num));
-  // set quarters/abs/gk after rows exist
-  const hrows = byId('homeRoster').querySelectorAll('tbody tr');
-  m.roster?.home?.forEach((p,i)=>{ if(!hrows[i])return; const tds=hrows[i].querySelectorAll('td'); tds[0].querySelector('input').value=p.num; tds[1].querySelector('input').checked=!!p.absent; tds[2].querySelector('input').checked=!!p.q?.Q1; tds[3].querySelector('input').checked=!!p.q?.Q2; tds[4].querySelector('input').checked=!!p.q?.Q3; tds[5].querySelector('input').checked=!!p.q?.Q4; tds[6].querySelector('input').value=p.gk||0; });
-  byId('awayRoster').querySelector('tbody').innerHTML=''; m.roster?.away?.forEach(p=>addAwayPlayer(p.num));
-  const arows = byId('awayRoster').querySelectorAll('tbody tr');
-  m.roster?.away?.forEach((p,i)=>{ if(!arows[i])return; const tds=arows[i].querySelectorAll('td'); tds[0].querySelector('input').value=p.num; tds[1].querySelector('input').checked=!!p.absent; tds[2].querySelector('input').checked=!!p.q?.Q1; tds[3].querySelector('input').checked=!!p.q?.Q2; tds[4].querySelector('input').checked=!!p.q?.Q3; tds[5].querySelector('input').checked=!!p.q?.Q4; tds[6].querySelector('input').value=p.gk||0; });
-  byId('goalsTable').querySelector('tbody').innerHTML='';
-  (m.goals||[]).forEach(g=>{
-    const tr=rowGoal();
-    tr.querySelector('.team').value=g.team; tr.querySelector('.num').value=g.num; tr.querySelector('.q').value=g.q; tr.querySelector('.min').value=g.min;
-    byId('goalsTable').querySelector('tbody').appendChild(tr);
-  });
-  byId('m-notes').value=m.notes||'';
-  // jump to Scan tab/editor
-  $$('nav .tab').find(t=>t.dataset.tab==='scan').click();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-/* ---------- standings ---------- */
-function recompute(){
-  const [WPTS,DPTS,LPTS] = prefs.pts || [3,1,0];
-  byId('ptsRule').textContent = `W=${WPTS}, D=${DPTS}, L=${LPTS}`;
-
-  const standings = {}; // division -> team -> stats
-  let totalGoals=0, refCount=0;
-
-  state.matches.forEach(m=>{
-    const div = m.division||'—';
-    standings[div] = standings[div] || {};
-    const T = (team)=> standings[div][team] || {gp:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};
-    const th=T(m.home), ta=T(m.away);
-    th.gp++; ta.gp++;
-    th.gf+=m.hs; th.ga+=m.as;
-    ta.gf+=m.as; ta.ga+=m.hs;
-    if(m.hs>m.as){ th.w++; th.pts+=WPTS; ta.l++; }
-    else if(m.hs<m.as){ ta.w++; ta.pts+=WPTS; th.l++; }
-    else { th.d++; ta.d++; th.pts+=DPTS; ta.pts+=DPTS; }
-    standings[div][m.home]=th; standings[div][m.away]=ta;
-
-    totalGoals += (m.hs||0)+(m.as||0);
-    refCount += (m.refs.cr?1:0) + (m.refs.ar1?1:0) + (m.refs.ar2?1:0);
-  });
-
-  byId('kpiGames').textContent = state.matches.length;
-  byId('kpiGoals').textContent = totalGoals;
-  byId('kpiRefs').textContent  = refCount;
-
-  const tb = byId('standingsTable').querySelector('tbody'); tb.innerHTML='';
-  Object.entries(standings).forEach(([div,teams])=>{
-    const rows = Object.entries(teams).map(([name,s])=>({...s, team:name, div, gd:s.gf-s.ga}))
-      .sort((a,b)=> a.div.localeCompare(b.div) || b.pts-a.pts || b.gd-a.gd || b.gf-a.gf);
-    rows.forEach(r=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${r.div}</td><td>${r.team}</td><td>${r.gp}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.gf}</td><td>${r.ga}</td><td>${r.gd}</td><td>${r.pts}</td>`;
-      tb.appendChild(tr);
+  // Tabs
+  const tabs=$$('.tab'); 
+  const sections={scan:$('#tab-scan'),matches:$('#tab-matches'),standings:$('#tab-standings'),refs:$('#tab-refs'),export:$('#tab-export'),settings:$('#tab-settings')};
+  tabs.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      tabs.forEach(b=>b.classList.replace('tab-active','tab-inactive'));
+      btn.classList.replace('tab-inactive','tab-active');
+      Object.entries(sections).forEach(([k,el])=>el.classList.toggle('hidden',k!==btn.dataset.tab));
+      if(btn.dataset.tab==='matches') renderMatches();
+      if(btn.dataset.tab==='standings') recomputeStandings();
+      if(btn.dataset.tab==='refs') renderRefs();
     });
   });
-}
 
-/* ---------- refs tally ---------- */
-function renderRefs(){
-  const tally={};
-  state.matches.forEach(m=>{
-    if(m.refs.cr){ tally[m.refs.cr]=(tally[m.refs.cr]||{cr:0,ar:0}); tally[m.refs.cr].cr++; }
-    if(m.refs.ar1){ tally[m.refs.ar1]=(tally[m.refs.ar1]||{cr:0,ar:0}); tally[m.refs.ar1].ar++; }
-    if(m.refs.ar2){ tally[m.refs.ar2]=(tally[m.refs.ar2]||{cr:0,ar:0}); tally[m.refs.ar2].ar++; }
-  });
-  const tb = byId('refsTable').querySelector('tbody'); tb.innerHTML='';
-  Object.entries(tally).sort((a,b)=> (b[1].cr+b[1].ar)-(a[1].cr+a[1].ar)).forEach(([name,t])=>{
+  // Dummy add player rows
+  function addPlayerRow(tbody,team){
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${name}</td><td>${t.cr||0}</td><td>${t.ar||0}</td><td>${(t.cr||0)+(t.ar||0)}</td>`;
-    tb.appendChild(tr);
-  });
-}
+    tr.innerHTML=`<td><input size=2/></td>
+      <td><input type="checkbox"/></td>
+      <td><input type="checkbox"/></td>
+      <td><input type="checkbox"/></td>
+      <td><input type="checkbox"/></td>
+      <td><input type="checkbox"/></td>
+      <td><input type="checkbox"/></td>`;
+    tbody.appendChild(tr);
+  }
+  $('#addHomePlayer').onclick=()=>addPlayerRow($('#homeRoster'));
+  $('#addAwayPlayer').onclick=()=>addPlayerRow($('#awayRoster'));
 
-/* ---------- IO ---------- */
-byId('exMatches').onclick=()=>{
-  const rows=[['gameId','date','division','field','homeTeam','awayTeam','homeScore','awayScore','CR','AR1','AR2','notes']];
-  state.matches.forEach(m=> rows.push([m.id,m.date,m.division,m.field,m.home,m.away,m.hs,m.as,m.refs.cr||'',m.refs.ar1||'',m.refs.ar2||'',m.notes||'']));
-  saveAs(new Blob([toCSV(rows)],{type:'text/csv;charset=utf-8'}), 'matches.csv');
-};
-byId('exGoals').onclick=()=>{
-  const rows=[['gameId','team','player','quarter','minute']];
-  state.matches.forEach(m=>{
-    (m.goals||[]).forEach(g=> rows.push([m.id, g.team==='home'?m.home:m.away, g.num, g.q, g.min]));
-  });
-  saveAs(new Blob([toCSV(rows)],{type:'text/csv;charset=utf-8'}), 'goals.csv');
-};
-byId('exRefs').onclick=()=>{
-  const rows=[['name','CR','AR','Total']];
-  const tally={};
-  state.matches.forEach(m=>{
-    if(m.refs.cr){ (tally[m.refs.cr]=tally[m.refs.cr]||{cr:0,ar:0}).cr++; }
-    if(m.refs.ar1){ (tally[m.refs.ar1]=tally[m.refs.ar1]||{cr:0,ar:0}).ar++; }
-    if(m.refs.ar2){ (tally[m.refs.ar2]=tally[m.refs.ar2]||{cr:0,ar:0}).ar++; }
-  });
-  Object.entries(tally).forEach(([n,t])=> rows.push([n,t.cr||0,t.ar||0,(t.cr||0)+(t.ar||0)]));
-  saveAs(new Blob([toCSV(rows)],{type:'text/csv;charset=utf-8'}), 'refs.csv');
-};
-byId('exJSON').onclick=()=>{
-  saveAs(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),'coachdesk-backup.json');
-};
-
-byId('impCSV').addEventListener('change', async e=>{
-  const f=e.target.files[0]; if(!f) return;
-  const txt=await f.text();
-  const lines=txt.split(/\r?\n/).filter(Boolean);
-  const header=lines.shift().split(',').map(h=>h.trim());
-  const idx=k=>header.indexOf(k);
-  lines.forEach(line=>{
-    const cols = line.match(/("([^"]*)"|[^,]+)/g)?.map(s=>s.replace(/^"|"$/g,'').replace(/""/g,'"'))||[];
-    const m = {
-      id: cols[idx('gameId')]||`G-${uid()}`, date: cols[idx('date')]||'',
-      division: cols[idx('division')]||'', field: cols[idx('field')]||'',
-      home: cols[idx('homeTeam')]||'', away: cols[idx('awayTeam')]||'',
-      hs:0, as:0, refs:{cr:'',ar1:'',ar2:''}, roster:{home:[],away:[],qLen:prefs.qLen}, goals:[], notes:''
+  // Save match
+  $('#btnSave').onclick=()=>{
+    const F=$('#matchForm');
+    const m={
+      gameId:F.gameId.value||`G-${Date.now()}`,
+      date:F.date.value,
+      division:F.division.value,
+      field:F.field.value,
+      home:F.homeTeam.value,
+      away:F.awayTeam.value,
+      homeScore:F.homeScore?.value||0,
+      awayScore:F.awayScore?.value||0,
+      cr:F.cr?.value,ar1:F.ar1?.value,ar2:F.ar2?.value
     };
-    if(!state.matches.find(x=>x.id===m.id)) state.matches.push(m);
-  });
-  localStorage.setItem(LS_KEY, JSON.stringify(state));
-  alert('Schedule imported.');
-  renderMatches();
-});
+    state.matches.push(m); saveState(); alert('Match saved');
+  };
 
-/* ---------- settings ---------- */
-function applyPrefs(){
-  document.documentElement.classList.toggle('dark', !!prefs.dark);
-  byId('optDark').checked = !!prefs.dark;
-  byId('optAutoId').checked = !!prefs.autoId;
-  byId('optLocal').checked = true; // local only in this version
-  byId('ptsW').value = (prefs.pts||[3,1,0])[0];
-  byId('ptsD').value = (prefs.pts||[3,1,0])[1];
-  byId('ptsL').value = (prefs.pts||[3,1,0])[2];
-  byId('qLen').value = prefs.qLen||15;
-}
-byId('savePrefs').onclick=()=>{
-  prefs.dark = byId('optDark').checked;
-  prefs.autoId = byId('optAutoId').checked;
-  prefs.pts = [ +byId('ptsW').value||3, +byId('ptsD').value||1, +byId('ptsL').value||0 ];
-  prefs.qLen = +byId('qLen').value || 15;
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-  alert('Settings saved.');
-  recompute();
-};
-byId('wipeAll').onclick=()=>{
-  if(confirm('Wipe ALL local data?')){ state={matches:[]}; localStorage.setItem(LS_KEY, JSON.stringify(state)); renderMatches(); recompute(); renderRefs(); }
-};
+  function renderMatches(){
+    const tbody=$('#matchesTable tbody'); tbody.innerHTML='';
+    state.matches.forEach(m=>{
+      tbody.innerHTML+=`<tr><td>${m.date}</td><td>${m.gameId}</td>
+        <td>${m.division}</td><td>${m.field}</td>
+        <td>${m.home}</td><td>${m.homeScore}-${m.awayScore}</td><td>${m.away}</td>
+        <td>${m.cr||''}</td><td>${m.ar1||''}</td><td>${m.ar2||''}</td></tr>`;
+    });
+  }
 
-/* ---------- init ---------- */
-byId('year').textContent = new Date().getFullYear();
-applyPrefs(); renderMatches(); recompute(); renderRefs();
-</script>
+  function recomputeStandings(){
+    const table={};
+    state.matches.forEach(m=>{
+      const div=m.division||'Unknown';
+      if(!table[div]) table[div]={};
+      [ [m.home,m.homeScore,m.awayScore], [m.away,m.awayScore,m.homeScore] ].forEach(([team,gf,ga])=>{
+        if(!table[div][team]) table[div][team]={gp:0,w:0,d:0,l:0,gf:0,ga:0};
+        const t=table[div][team]; t.gp++; t.gf+=+gf; t.ga+=+ga;
+        if(gf>ga) t.w++; else if(gf==ga) t.d++; else t.l++;
+      });
+    });
+    const tbody=$('#standingsTable tbody'); tbody.innerHTML='';
+    Object.entries(table).forEach(([div,teams])=>{
+      Object.entries(teams).forEach(([team,t])=>{
+        const pts=t.w*3+t.d;
+        const gd=t.gf-t.ga;
+        tbody.innerHTML+=`<tr><td>${div}</td><td>${team}</td>
+          <td>${t.gp}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+          <td>${t.gf}</td><td>${t.ga}</td><td>${gd}</td><td>${pts}</td></tr>`;
+      });
+    });
+  }
+
+  function renderRefs(){
+    const refs={};
+    state.matches.forEach(m=>{
+      [ ['cr',m.cr], ['ar1',m.ar1], ['ar2',m.ar2] ].forEach(([role,name])=>{
+        if(!name) return;
+        if(!refs[name]) refs[name]={cr:0,ar1:0,ar2:0};
+        refs[name][role]++;
+      });
+    });
+    const tbody=$('#refsTable tbody'); tbody.innerHTML='';
+    Object.entries(refs).forEach(([name,r])=>{
+      const tot=r.cr+r.ar1+r.ar2;
+      tbody.innerHTML+=`<tr><td>${name}</td><td>${r.cr}</td><td>${r.ar1}</td><td>${r.ar2}</td><td>${tot}</td></tr>`;
+    });
+  }
+
+  // Export
+  function toCSV(rows){return rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');}
+  $('#exportMatches').onclick=()=>{
+    const rows=[['Date','Game','Division','Field','Home','HomeScore','AwayScore','Away','CR','AR1','AR2']];
+    state.matches.forEach(m=>rows.push([m.date,m.gameId,m.division,m.field,m.home,m.homeScore,m.awayScore,m.away,m.cr,m.ar1,m.ar2]));
+    saveAs(new Blob([toCSV(rows)],{type:'text/csv'}),'matches.csv');
+  };
+  $('#exportStandings').onclick=()=>{alert('Standings export not yet wired')};
+  $('#exportRefs').onclick=()=>{alert('Refs export not yet wired')};
+  $('#exportJSON').onclick=()=>saveAs(new Blob([JSON.stringify(state)],{type:'application/json'}),'backup.json');
+
+  // Reset
+  $('#wipe').onclick=()=>{ if(confirm('Clear all data?')){localStorage.removeItem(LS_KEY); location.reload();} };
+
+  $('#year').textContent=new Date().getFullYear();
+  </script>
 </body>
 </html>
